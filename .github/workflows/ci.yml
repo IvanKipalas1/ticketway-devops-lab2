@@ -45,5 +45,6 @@ jobs:
         working-directory: backend
         env:
           DATABASE_URL: postgresql+psycopg2://postgres:secret@localhost:5433/ticketway_test
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: |
           python -m pytest tests/ -v
