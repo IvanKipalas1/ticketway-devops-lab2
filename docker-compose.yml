@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ticketway
+    ports:
+      - "5433:5432"
+    volumes:
+      - ticketway_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ticketway"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ticketway_postgres_data:
