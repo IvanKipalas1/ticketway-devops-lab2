@@ -1,0 +1,424 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TicketWay — Бронювання квитків</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6fb;
+      margin: 0;
+      color: #222;
+    }
+
+    header {
+      background: #253b80;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    main {
+      max-width: 750px;
+      margin: 25px auto;
+      padding: 0 15px;
+    }
+
+    section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0001;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    button {
+      background: #253b80;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #3655b3;
+    }
+
+    .event {
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 6px;
+    }
+
+    #message {
+      white-space: pre-wrap;
+      font-weight: bold;
+    }
+
+    #ticketSection {
+      text-align: center;
+    }
+
+    #ticketSection[hidden] {
+      display: none;
+    }
+
+    #ticketQR {
+      width: 250px;
+      max-width: 100%;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>TicketWay</h1>
+    <p>Система бронювання квитків</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Реєстрація / Вхід</h2>
+
+      <input id="email" type="email" placeholder="Email">
+      <input id="password" type="password" placeholder="Пароль">
+
+      <button onclick="register()">Зареєструватися</button>
+      <button onclick="login()">Увійти</button>
+
+      <p id="authStatus">Ви не авторизовані</p>
+    </section>
+
+    <section>
+      <h2>Доступні події</h2>
+
+      <button onclick="loadEvents()">Оновити список подій</button>
+      <div id="events"></div>
+    </section>
+
+    <section>
+      <h2>Бронювання</h2>
+
+      <label for="eventId">ID події</label>
+      <input
+        id="eventId"
+        type="number"
+        min="1"
+        placeholder="ID події"
+      >
+
+      <label for="seat">Номер місця</label>
+      <input
+        id="seat"
+        type="number"
+        min="1"
+        placeholder="Наприклад, 1"
+      >
+
+      <button onclick="reserve()">Забронювати місце</button>
+      <p id="reservationInfo"></p>
+    </section>
+
+    <section>
+      <h2>Тестова оплата</h2>
+      <p>Реальні кошти не списуються.</p>
+
+      <button onclick="pay()">Оплатити бронювання</button>
+    </section>
+
+    <section>
+      <h2>Результат</h2>
+      <p id="message">Очікування дій користувача...</p>
+    </section>
+
+    <section id="ticketSection" hidden>
+      <h2>Ваш електронний квиток</h2>
+      <p>Покажіть цей QR-код при вході на подію.</p>
+
+      <img id="ticketQR" alt="QR-код квитка">
+    </section>
+  </main>
+
+  <script>
+    const API = "http://localhost:8000";
+
+    let token = "";
+    let reservationId = null;
+    let qrImageURL = null;
+
+    function showMessage(text) {
+      document.getElementById("message").textContent = text;
+    }
+
+    function hideTicket() {
+      document.getElementById("ticketSection").hidden = true;
+      document.getElementById("ticketQR").removeAttribute("src");
+
+      if (qrImageURL) {
+        URL.revokeObjectURL(qrImageURL);
+        qrImageURL = null;
+      }
+    }
+
+    async function request(path, options = {}) {
+      const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      };
+
+      if (token) {
+        headers.Authorization = "Bearer " + token;
+      }
+
+      const response = await fetch(API + path, {
+        ...options,
+        headers
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const detail = typeof data.detail === "string"
+          ? data.detail
+          : JSON.stringify(data.detail || data);
+
+        throw new Error(detail);
+      }
+
+      return data;
+    }
+
+    function credentials() {
+      return {
+        email: document.getElementById("email").value.trim(),
+        password: document.getElementById("password").value
+      };
+    }
+
+    async function register() {
+      try {
+        await request("/auth/register", {
+          method: "POST",
+          body: JSON.stringify(credentials())
+        });
+
+        showMessage("Реєстрація успішна! Тепер увійдіть.");
+      } catch (error) {
+        showMessage("Помилка реєстрації: " + error.message);
+      }
+    }
+
+    async function login() {
+      token = "";
+      reservationId = null;
+      hideTicket();
+
+      document.getElementById("authStatus").textContent =
+        "Ви не авторизовані";
+
+      document.getElementById("reservationInfo").textContent = "";
+
+      try {
+        const data = await request("/auth/login", {
+          method: "POST",
+          body: JSON.stringify(credentials())
+        });
+
+        token = data.access_token;
+
+        document.getElementById("authStatus").textContent =
+          "Ви авторизовані";
+
+        showMessage("Вхід успішний!");
+      } catch (error) {
+        showMessage("Помилка входу: " + error.message);
+      }
+    }
+
+    async function loadEvents() {
+      try {
+        const events = await request("/events/");
+        const container = document.getElementById("events");
+
+        container.replaceChildren();
+
+        if (!events.length) {
+          container.textContent = "Поки немає доступних подій.";
+          return;
+        }
+
+        events.forEach(event => {
+          const div = document.createElement("div");
+          div.className = "event";
+
+          const title = document.createElement("h3");
+          title.textContent = event.title;
+
+          const info = document.createElement("p");
+          info.textContent =
+            "Місце: " + event.location +
+            " | Ціна: " + event.price +
+            " | Кількість місць: " + event.total_seats;
+
+          const button = document.createElement("button");
+          button.textContent = "Обрати подію";
+
+          button.onclick = () => {
+            document.getElementById("eventId").value = event.id;
+            reservationId = null;
+
+            document.getElementById("reservationInfo").textContent = "";
+            hideTicket();
+
+            showMessage("Обрано подію: " + event.title);
+          };
+
+          div.append(title, info, button);
+          container.appendChild(div);
+        });
+      } catch (error) {
+        showMessage("Помилка завантаження подій: " + error.message);
+      }
+    }
+
+    async function reserve() {
+      if (!token) {
+        showMessage("Спочатку увійдіть у систему.");
+        return;
+      }
+
+      const eventId = Number(
+        document.getElementById("eventId").value
+      );
+
+      const seat = Number(
+        document.getElementById("seat").value
+      );
+
+      if (
+        !Number.isInteger(eventId) || eventId < 1 ||
+        !Number.isInteger(seat) || seat < 1
+      ) {
+        showMessage("Вкажіть правильний ID події та номер місця.");
+        return;
+      }
+
+      reservationId = null;
+      document.getElementById("reservationInfo").textContent = "";
+      hideTicket();
+
+      try {
+        const data = await request("/reservations/", {
+          method: "POST",
+          body: JSON.stringify({
+            event_id: eventId,
+            seat_number: seat
+          })
+        });
+
+        reservationId = data.id;
+
+        document.getElementById("reservationInfo").textContent =
+          "Бронювання №" + reservationId +
+          ". Дійсне до: " +
+          new Date(data.expires_at).toLocaleString("uk-UA");
+
+        showMessage("Місце успішно заброньовано!");
+      } catch (error) {
+        showMessage("Помилка бронювання: " + error.message);
+      }
+    }
+
+    async function showTicketQR(ticketId) {
+      const response = await fetch(
+        API + "/tickets/" + ticketId + "/qr",
+        {
+          headers: {
+            Authorization: "Bearer " + token
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Не вдалося завантажити QR-код");
+      }
+
+      const imageBlob = await response.blob();
+
+      hideTicket();
+
+      qrImageURL = URL.createObjectURL(imageBlob);
+
+      document.getElementById("ticketQR").src = qrImageURL;
+      document.getElementById("ticketSection").hidden = false;
+    }
+
+    async function pay() {
+      if (!token || !reservationId) {
+        showMessage("Спочатку створіть бронювання.");
+        return;
+      }
+
+      let data;
+
+      try {
+        const paymentId = "demo-" + crypto.randomUUID();
+
+        data = await request("/payments/", {
+          method: "POST",
+          body: JSON.stringify({
+            reservation_id: reservationId,
+            payment_id: paymentId,
+            success: true
+          })
+        });
+      } catch (error) {
+        showMessage("Помилка оплати: " + error.message);
+        return;
+      }
+
+      showMessage(
+        "Оплата успішна!\n" +
+        "Платіж: " + data.payment_id + "\n" +
+        "Статус бронювання: " + data.reservation_status +
+        "\nЕлектронний квиток створено."
+      );
+
+      reservationId = null;
+
+      document.getElementById("reservationInfo").textContent =
+        "Оплачено";
+
+      if (data.ticket_id) {
+        try {
+          await showTicketQR(data.ticket_id);
+        } catch (error) {
+          showMessage(
+            "Оплата успішна, але QR-код не завантажився: " +
+            error.message
+          );
+        }
+      } else {
+        showMessage(
+          "Оплата успішна, але Backend не повернув ID квитка. " +
+          "Перевірте payments.py."
+        );
+      }
+    }
+
+    loadEvents();
+  </script>
+</body>
+</html>

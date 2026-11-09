@@ -110,7 +110,8 @@ def create_payment(
         return {
             "payment_id": payment.payment_id,
             "status": payment.status,
-            "reservation_status": reservation.status
+            "reservation_status": reservation.status,
+            "ticket_id": ticket.id if data.success else None
         }
 
     except Exception:
