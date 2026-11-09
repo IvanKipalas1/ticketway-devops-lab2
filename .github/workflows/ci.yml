@@ -49,6 +49,7 @@ jobs:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: |
           python -m pytest tests/ -v
+          
 
     selenium:
     runs-on: ubuntu-latest
