@@ -50,11 +50,11 @@ jobs:
         run: |
           python -m pytest tests/ -v
 
-  selenium:
+    selenium:
     runs-on: ubuntu-latest
 
     env:
-      JWT_SECRET_KEY: ticketway-ci-test-secret-key
+      JWT_SECRET_KEY: ticketway-ci-testing-secret-key-2026-abcdef123456
 
     steps:
       - name: Checkout repository
