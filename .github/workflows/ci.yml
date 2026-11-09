@@ -53,6 +53,9 @@ jobs:
   selenium:
     runs-on: ubuntu-latest
 
+    env:
+      JWT_SECRET_KEY: ticketway-ci-test-secret-key
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,8 +71,6 @@ jobs:
           pip install selenium pytest
 
       - name: Start TicketWay
-        env:
-          JWT_SECRET_KEY: ticketway-ci-test-secret-key
         run: |
           docker compose up -d --build
 
