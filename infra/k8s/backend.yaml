@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketway-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ticketway-backend
+  template:
+    metadata:
+      labels:
+        app: ticketway-backend
+    spec:
+      containers:
+        - name: backend
+          image: ticketway-backend:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ticketway-secrets
+                  key: database-url
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ticketway-secrets
+                  key: jwt-secret-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticketway-backend
+spec:
+  selector:
+    app: ticketway-backend
+  ports:
+    - port: 8000
+      targetPort: 8000

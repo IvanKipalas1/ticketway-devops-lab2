@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketway-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ticketway-worker
+  template:
+    metadata:
+      labels:
+        app: ticketway-worker
+    spec:
+      containers:
+        - name: worker
+          image: ticketway-worker:1.0
+          imagePullPolicy: IfNotPresent

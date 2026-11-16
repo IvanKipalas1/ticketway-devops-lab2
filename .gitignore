@@ -17,3 +17,18 @@ htmlcov/
 # IDE
 .vscode/
 .idea/
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+*.tfvars
+*.tfvars.json
+
+# Local dependencies
+node_modules/
+
+# Lab archives
+lab5/**/*.zip

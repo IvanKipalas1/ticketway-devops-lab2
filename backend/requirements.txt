@@ -10,3 +10,4 @@ PyJWT
 email-validator
 python-dotenv
 qrcode[pil]
+prometheus-fastapi-instrumentator==8.1.0

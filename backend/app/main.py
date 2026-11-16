@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
@@ -74,3 +74,5 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+Instrumentator().instrument(app).expose(app)
